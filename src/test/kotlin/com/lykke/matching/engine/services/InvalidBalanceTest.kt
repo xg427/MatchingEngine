@@ -12,7 +12,6 @@ import com.lykke.matching.engine.order.OrderStatus
 import com.lykke.matching.engine.outgoing.messages.LimitOrdersReport
 import com.lykke.matching.engine.outgoing.messages.MarketOrderWithTrades
 import com.lykke.matching.engine.outgoing.messages.v2.enums.OrderRejectReason
-import com.lykke.matching.engine.outgoing.messages.v2.enums.OrderStatus as OutgoingOrderStatus
 import com.lykke.matching.engine.outgoing.messages.v2.events.ExecutionEvent
 import com.lykke.matching.engine.utils.MessageBuilder.Companion.buildLimitOrder
 import com.lykke.matching.engine.utils.MessageBuilder.Companion.buildLimitOrderWrapper
@@ -20,6 +19,7 @@ import com.lykke.matching.engine.utils.MessageBuilder.Companion.buildMarketOrder
 import com.lykke.matching.engine.utils.MessageBuilder.Companion.buildMarketOrderWrapper
 import com.lykke.matching.engine.utils.MessageBuilder.Companion.buildMultiLimitOrderWrapper
 import com.lykke.matching.engine.utils.MessageBuilder.Companion.buildTransferWrapper
+import com.lykke.matching.engine.utils.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,7 +32,7 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.junit4.SpringRunner
 import java.math.BigDecimal
 import kotlin.test.assertEquals
-import com.lykke.matching.engine.utils.assertEquals
+import com.lykke.matching.engine.outgoing.messages.v2.enums.OrderStatus as OutgoingOrderStatus
 
 @RunWith(SpringRunner::class)
 @SpringBootTest(classes = [(TestApplicationContext::class), (InvalidBalanceTest.Config::class)])
@@ -210,7 +210,6 @@ class InvalidBalanceTest : AbstractTest() {
     @Test
     fun testMultiLimitOrderWithNotEnoughReservedFunds() {
         testBalanceHolderWrapper.updateBalance("Client1", "ETH", 0.25)
-        testBalanceHolderWrapper.updateReservedBalance("Client1", "ETH", reservedBalance = 0.09)
         testBalanceHolderWrapper.updateBalance("Client2", "USD", 275.0)
 
         initServices()
@@ -222,6 +221,7 @@ class InvalidBalanceTest : AbstractTest() {
                 IncomingLimitOrder(-0.05, 1010.0, "2"),
                 IncomingLimitOrder(-0.1, 1100.0, "3")
         )))
+        testBalanceHolderWrapper.updateReservedBalance("Client1", "ETH", reservedBalance = 0.09)
         testConfigDatabaseAccessor.clear()
         applicationSettingsCache.update()
 
@@ -254,7 +254,7 @@ class InvalidBalanceTest : AbstractTest() {
 
     @Test
     fun `Test multi limit order with enough reserved but not enough main balance`() {
-        testBalanceHolderWrapper.updateBalance("Client1", "ETH", 0.04)
+        testBalanceHolderWrapper.updateBalance("Client1", "ETH", 0.1)
         testBalanceHolderWrapper.updateReservedBalance("Client1", "ETH", reservedBalance = 0.05)
         testBalanceHolderWrapper.updateBalance("Client2", "USD", 275.0)
 
@@ -264,6 +264,7 @@ class InvalidBalanceTest : AbstractTest() {
         applicationSettingsCache.update()
         multiLimitOrderService.processMessage(buildMultiLimitOrderWrapper("ETHUSD", "Client1",
                 listOf(IncomingLimitOrder(-0.05, 1010.0, "1"))))
+        testBalanceHolderWrapper.updateBalance("Client1", "ETH", 0.04)
         testConfigDatabaseAccessor.clear()
         applicationSettingsCache.update()
 
