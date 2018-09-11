@@ -22,6 +22,7 @@ import com.lykke.matching.engine.outgoing.messages.OrderBook
 import com.lykke.matching.engine.outgoing.messages.v2.events.Event
 import com.lykke.matching.engine.outgoing.messages.v2.events.ExecutionEvent
 import com.lykke.matching.engine.services.*
+import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.services.validators.impl.MarketOrderValidatorImpl
 import com.lykke.matching.engine.services.validators.impl.MultiLimitOrderValidatorImpl
 import java.util.concurrent.LinkedBlockingQueue
@@ -137,7 +138,13 @@ abstract class AbstractPerformanceTest {
                 balancesHolder,
                 applicationSettingsCache, clientLimitOrdersQueue, feeProcessor, messageSequenceNumberHolder, notificationSender)
 
-        singleLimitOrderService = SingleLimitOrderService(genericLimitOrderProcessorFactory)
+        val executionPersistenceHelper = ExecutionPersistenceHelper(persistenceManager,
+                messageSequenceNumberHolder,
+                notificationSender,
+                clientLimitOrdersQueue,
+                trustedClientsLimitOrdersQueue,
+                rabbitSwapQueue)
+        singleLimitOrderService = SingleLimitOrderService(genericLimitOrderProcessorFactory, assetsPairsHolder, applicationSettingsCache, executionPersistenceHelper)
 
         genericLimitOrdersCancellerFactory = GenericLimitOrdersCancellerFactory(testDictionariesDatabaseAccessor, assetsPairsHolder,
                 balancesHolder, genericLimitOrderService, genericStopLimitOrderService,

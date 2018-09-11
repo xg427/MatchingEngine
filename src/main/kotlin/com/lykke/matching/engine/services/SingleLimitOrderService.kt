@@ -4,13 +4,17 @@ import com.lykke.matching.engine.daos.v2.LimitOrderFeeInstruction
 import com.lykke.matching.engine.daos.LimitOrder
 import com.lykke.matching.engine.daos.fee.v2.NewLimitOrderFeeInstruction
 import com.lykke.matching.engine.daos.order.LimitOrderType
+import com.lykke.matching.engine.database.cache.ApplicationSettingsCache
 import com.lykke.matching.engine.fee.listOfLimitOrderFee
+import com.lykke.matching.engine.holders.AssetsPairsHolder
 import com.lykke.matching.engine.messages.MessageStatus
 import com.lykke.matching.engine.messages.MessageType
 import com.lykke.matching.engine.messages.MessageWrapper
 import com.lykke.matching.engine.messages.ProtocolMessages
 import com.lykke.matching.engine.order.GenericLimitOrderProcessorFactory
 import com.lykke.matching.engine.order.OrderStatus
+import com.lykke.matching.engine.outgoing.messages.LimitOrderWithTrades
+import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.utils.PrintUtils
 import com.lykke.matching.engine.utils.NumberUtils
 import org.apache.log4j.Logger
@@ -18,7 +22,10 @@ import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
 
-class SingleLimitOrderService(genericLimitOrderProcessorFactory: GenericLimitOrderProcessorFactory): AbstractService {
+class SingleLimitOrderService(genericLimitOrderProcessorFactory: GenericLimitOrderProcessorFactory,
+                              private val assetsPairsHolder: AssetsPairsHolder,
+                              private val applicationSettingsCache: ApplicationSettingsCache,
+                              private val executionPersistenceHelper: ExecutionPersistenceHelper): AbstractService {
 
     companion object {
         private val LOGGER = Logger.getLogger(SingleLimitOrderService::class.java.name)
@@ -60,6 +67,15 @@ class SingleLimitOrderService(genericLimitOrderProcessorFactory: GenericLimitOrd
             order = createOrder(message, now)
             LOGGER.info("Got limit order ${incomingMessageInfo(messageWrapper.messageId, message, order)}")
             isCancelOrders = message.cancelAllPreviousLimitOrders
+        }
+
+        if (!isAssetPairKnown(order.assetPairId)) {
+            if (rejectOrderWithUnknownAssetPair(messageWrapper, order, now)) {
+                writeResponse(messageWrapper, MessageStatus.UNKNOWN_ASSET)
+            } else {
+                writeResponse(messageWrapper, MessageStatus.RUNTIME)
+            }
+            return
         }
 
         genericLimitOrderProcessor.processOrder(messageWrapper, order, isCancelOrders, now)
@@ -128,6 +144,31 @@ class SingleLimitOrderService(genericLimitOrderProcessorFactory: GenericLimitOrd
 
     private fun parseOldLimitOrder(array: ByteArray): ProtocolMessages.OldLimitOrder {
         return ProtocolMessages.OldLimitOrder.parseFrom(array)
+    }
+
+    private fun isAssetPairKnown(assetPairId: String): Boolean {
+        return assetsPairsHolder.getAssetPairAllowNulls(assetPairId) != null
+    }
+
+    private fun rejectOrderWithUnknownAssetPair(messageWrapper: MessageWrapper, order: LimitOrder, date: Date): Boolean {
+        LOGGER.info("Limit order (id: ${order.externalId}, messageId: ${messageWrapper.messageId}) is rejected due to unknown asset pair")
+        order.updateStatus(OrderStatus.UnknownAsset, date)
+        val trustedClientsOrdersWithTrades = mutableListOf<LimitOrderWithTrades>()
+        val clientsOrdersWithTrades = mutableListOf<LimitOrderWithTrades>()
+        val orderWithTrades = LimitOrderWithTrades(order)
+        if (applicationSettingsCache.isTrustedClient(order.clientId)) {
+            trustedClientsOrdersWithTrades.add(orderWithTrades)
+        } else {
+            clientsOrdersWithTrades.add(orderWithTrades)
+        }
+        return executionPersistenceHelper.persistAndSendEvents(messageWrapper,
+                processedMessage = messageWrapper.processedMessage(),
+                clientsLimitOrdersWithTrades = clientsOrdersWithTrades,
+                trustedClientsLimitOrdersWithTrades = trustedClientsOrdersWithTrades,
+                messageId = messageWrapper.messageId!!,
+                requestId = order.externalId,
+                messageType = MessageType.LIMIT_ORDER,
+                date = date)
     }
 
     override fun parseMessage(messageWrapper: MessageWrapper) {

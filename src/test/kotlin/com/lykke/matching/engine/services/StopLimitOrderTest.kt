@@ -100,6 +100,16 @@ class StopLimitOrderTest : AbstractTest() {
     }
 
     @Test
+    fun testUnknownAssetPair() {
+        singleLimitOrderService.processMessage(buildLimitOrderWrapper(buildLimitOrder(assetId = "UnknownAssetPair",
+                type = LimitOrderType.STOP_LIMIT, volume = -1.0, lowerLimitPrice = 9500.0, lowerPrice = 9000.0)))
+        assertEquals(1, clientsEventsQueue.size)
+        val event = clientsEventsQueue.poll() as ExecutionEvent
+        assertEquals(OutgoingOrderStatus.REJECTED, event.orders.single().status)
+        assertEquals(OrderRejectReason.UNKNOWN_ASSET, event.orders.single().rejectReason)
+    }
+
+    @Test
     fun testInvalidPrice() {
         singleLimitOrderService.processMessage(buildLimitOrderWrapper(buildLimitOrder(
                 clientId = "Client1", assetId = "BTCUSD", volume = -1.0,

@@ -193,6 +193,15 @@ class LimitOrderServiceTest: AbstractTest() {
     }
 
     @Test
+    fun testUnknownAssetPair() {
+        singleLimitOrderService.processMessage(buildLimitOrderWrapper(buildLimitOrder(assetId = "UnknownAssetPair")))
+        assertEquals(1, clientsEventsQueue.size)
+        val event = clientsEventsQueue.poll() as ExecutionEvent
+        assertEquals(OutgoingOrderStatus.REJECTED, event.orders.single().status)
+        assertEquals(OrderRejectReason.UNKNOWN_ASSET, event.orders.single().rejectReason)
+    }
+
+    @Test
     fun testLeadToNegativeSpreadForClientOrder() {
         testBalanceHolderWrapper.updateBalance("Client1", "EUR", 1000.0)
         testBalanceHolderWrapper.updateReservedBalance("Client1", "EUR",  500.0)

@@ -29,6 +29,7 @@ import com.lykke.matching.engine.outgoing.messages.*
 import com.lykke.matching.engine.outgoing.messages.v2.events.Event
 import com.lykke.matching.engine.outgoing.messages.v2.events.ExecutionEvent
 import com.lykke.matching.engine.services.*
+import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.services.validators.*
 import com.lykke.matching.engine.services.validators.business.CashInOutOperationBusinessValidator
 import com.lykke.matching.engine.services.validators.business.CashTransferOperationBusinessValidator
@@ -452,5 +453,20 @@ open class TestApplicationContext {
                                           messageSender: MessageSender): CashTransferOperationService {
         return CashTransferOperationService(balancesHolder, notification, dbTransferOperationQueue, feeProcessor,
                 cashTransferOperationBusinessValidator, messageSequenceNumberHolder, messageSender)
+    }
+
+    @Bean
+    open fun executionPersistenceHelper(persistenceManager: PersistenceManager,
+                                        messageSequenceNumberHolder: MessageSequenceNumberHolder,
+                                        messageSender: MessageSender,
+                                        clientLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
+                                        trustedClientsLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
+                                        rabbitSwapQueue: BlockingQueue<MarketOrderWithTrades>): ExecutionPersistenceHelper {
+        return ExecutionPersistenceHelper(persistenceManager,
+                messageSequenceNumberHolder,
+                messageSender,
+                clientLimitOrdersQueue,
+                trustedClientsLimitOrdersQueue,
+                rabbitSwapQueue)
     }
 }

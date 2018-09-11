@@ -19,6 +19,7 @@ import com.lykke.matching.engine.outgoing.messages.v2.events.Event
 import com.lykke.matching.engine.outgoing.messages.v2.events.ExecutionEvent
 import com.lykke.matching.engine.outgoing.messages.v2.events.common.BalanceUpdate
 import com.lykke.matching.engine.services.*
+import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.services.validators.business.CashInOutOperationBusinessValidator
 import com.lykke.matching.engine.services.validators.business.CashTransferOperationBusinessValidator
 import org.springframework.beans.factory.annotation.Autowired
@@ -159,6 +160,9 @@ abstract class AbstractTest {
     @Autowired
     protected lateinit var cashInOutOperationService: CashInOutOperationService
 
+    @Autowired
+    protected lateinit var executionPersistenceHelper: ExecutionPersistenceHelper
+
     protected lateinit var singleLimitOrderService: SingleLimitOrderService
 
     protected lateinit var reservedBalanceUpdateService: ReservedBalanceUpdateService
@@ -174,7 +178,7 @@ abstract class AbstractTest {
         applicationSettingsCache.update()
 
         reservedBalanceUpdateService = ReservedBalanceUpdateService(balancesHolder)
-        singleLimitOrderService = SingleLimitOrderService(genericLimitOrderProcessorFactory)
+        singleLimitOrderService = SingleLimitOrderService(genericLimitOrderProcessorFactory, assetsPairsHolder, applicationSettingsCache, executionPersistenceHelper)
 
         limitOrderCancelService = LimitOrderCancelService(genericLimitOrderService, genericStopLimitOrderService, genericLimitOrdersCancellerFactory)
         multiLimitOrderCancelService = MultiLimitOrderCancelService(genericLimitOrderService, genericLimitOrdersCancellerFactory)

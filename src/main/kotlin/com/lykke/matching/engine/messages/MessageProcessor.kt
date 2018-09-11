@@ -29,6 +29,7 @@ import com.lykke.matching.engine.outgoing.socket.ConnectionsHolder
 import com.lykke.matching.engine.outgoing.socket.SocketServer
 import com.lykke.matching.engine.performance.PerformanceStatsHolder
 import com.lykke.matching.engine.services.*
+import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.utils.config.Config
 import com.lykke.matching.engine.utils.monitoring.GeneralHealthMonitor
 import com.lykke.utils.logging.MetricsLogger
@@ -139,7 +140,7 @@ class MessageProcessor(config: Config, messageRouter: MessageRouter, application
         this.reservedCashInOutOperationService = applicationContext.getBean(ReservedCashInOutOperationService::class.java)
         this.cashTransferOperationService = applicationContext.getBean(CashTransferOperationService::class.java)
         this.cashSwapOperationService = applicationContext.getBean(CashSwapOperationService::class.java)
-        this.singleLimitOrderService = SingleLimitOrderService(genericLimitOrderProcessorFactory)
+        this.singleLimitOrderService = SingleLimitOrderService(genericLimitOrderProcessorFactory, assetsPairsHolder, applicationSettingsCache, applicationContext.getBean(ExecutionPersistenceHelper::class.java))
 
         this.marketOrderService = applicationContext.getBean(MarketOrderService::class.java)
 
