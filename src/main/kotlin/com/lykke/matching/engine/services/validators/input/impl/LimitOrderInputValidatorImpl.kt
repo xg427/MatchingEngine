@@ -25,10 +25,10 @@ class LimitOrderInputValidatorImpl : LimitOrderInputValidator {
     private fun validateLimitOrder(singleLimitContext: SingleLimitOrderContext) {
         validateLimitOrder(singleLimitContext.isTrustedClient,
                 singleLimitContext.limitOrder,
-                singleLimitContext.assetPair,
+                singleLimitContext.assetPair!!,
                 singleLimitContext.baseAssetDisabled,
                 singleLimitContext.quotingAssetDisabled,
-                singleLimitContext.baseAsset)
+                singleLimitContext.baseAsset!!)
     }
 
     override fun validateLimitOrder(isTrustedClient: Boolean,
@@ -55,8 +55,8 @@ class LimitOrderInputValidatorImpl : LimitOrderInputValidator {
         validateFee(singleLimitContext.limitOrder)
         validateAssets(singleLimitContext.baseAssetDisabled, singleLimitContext.quotingAssetDisabled)
         validateLimitPrices(singleLimitContext.limitOrder)
-        validateVolume(singleLimitContext.limitOrder, singleLimitContext.assetPair)
-        validateVolumeAccuracy(singleLimitContext.limitOrder, singleLimitContext.baseAsset)
+        validateVolume(singleLimitContext.limitOrder, singleLimitContext.assetPair!!)
+        validateVolumeAccuracy(singleLimitContext.limitOrder, singleLimitContext.baseAsset!!)
         validatePriceAccuracy(singleLimitContext.limitOrder, singleLimitContext.assetPair)
     }
 

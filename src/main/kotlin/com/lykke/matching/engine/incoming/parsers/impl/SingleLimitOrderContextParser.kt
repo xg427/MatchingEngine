@@ -57,12 +57,12 @@ class SingleLimitOrderContextParser(val assetsPairsHolder: AssetsPairsHolder,
                 .messageId(messageId)
                 .limitOrder(order)
                 .assetPair(assetPair)
-                .baseAsset(getBaseAsset(assetPair))
-                .baseAssetDisabled(applicationSettingsCache.isAssetDisabled(assetPair.baseAssetId))
-                .quotingAssetDisabled(applicationSettingsCache.isAssetDisabled(assetPair.quotingAssetId))
-                .quotingAsset(getQuotingAsset(assetPair))
+                .baseAsset(if (assetPair != null) getBaseAsset(assetPair) else null)
+                .baseAssetDisabled(assetPair != null && applicationSettingsCache.isAssetDisabled(assetPair.baseAssetId))
+                .quotingAssetDisabled(assetPair != null && applicationSettingsCache.isAssetDisabled(assetPair.quotingAssetId))
+                .quotingAsset(if (assetPair != null) getQuotingAsset(assetPair) else null)
                 .trustedClient(getTrustedClient(builder.limitOrder.clientId))
-                .limitAsset(getLimitAsset(order, assetPair))
+                .limitAsset(if (assetPair != null) getLimitAsset(order, assetPair) else null)
                 .cancelOrders(cancelOrders)
                 .processedMessage(processedMessage)
 
@@ -77,8 +77,8 @@ class SingleLimitOrderContextParser(val assetsPairsHolder: AssetsPairsHolder,
         return applicationSettingsCache.isTrustedClient(clientId)
     }
 
-    fun getAssetPair(assetPairId: String): AssetPair {
-        return assetsPairsHolder.getAssetPair(assetPairId)
+    fun getAssetPair(assetPairId: String): AssetPair? {
+        return assetsPairsHolder.getAssetPairAllowNulls(assetPairId)
     }
 
     private fun getBaseAsset(assetPair: AssetPair): Asset {

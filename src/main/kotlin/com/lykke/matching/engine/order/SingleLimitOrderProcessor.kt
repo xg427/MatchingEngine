@@ -25,7 +25,7 @@ class SingleLimitOrderProcessor(private val limitOrderService: GenericLimitOrder
                           payBackReserved: BigDecimal? = null,
                           messageWrapper: MessageWrapper? = null) {
         val order = singleLimitContext.limitOrder
-        val assetPair = singleLimitContext.assetPair
+        val assetPair = singleLimitContext.assetPair!!
         val limitAsset = if (order.isBuySide()) assetPair.quotingAssetId else assetPair.baseAssetId
         val orderBook = limitOrderService.getOrderBook(order.assetPairId).copy()
         val clientsLimitOrdersWithTrades = mutableListOf<LimitOrderWithTrades>()
@@ -52,8 +52,8 @@ class SingleLimitOrderProcessor(private val limitOrderService: GenericLimitOrder
                 singleLimitContext.isTrustedClient,
                 order.clientId,
                 assetPair,
-                singleLimitContext.baseAsset,
-                singleLimitContext.quotingAsset,
+                singleLimitContext.baseAsset!!,
+                singleLimitContext.quotingAsset!!,
                 orderBook,
                 if (limitAsset == assetPair.baseAssetId) totalPayBackReserved else BigDecimal.ZERO,
                 if (limitAsset == assetPair.quotingAssetId) totalPayBackReserved else BigDecimal.ZERO,

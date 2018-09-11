@@ -47,6 +47,7 @@ import com.lykke.matching.engine.outgoing.messages.*
 import com.lykke.matching.engine.outgoing.messages.v2.events.Event
 import com.lykke.matching.engine.outgoing.messages.v2.events.ExecutionEvent
 import com.lykke.matching.engine.services.*
+import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.services.validators.*
 import com.lykke.matching.engine.services.validators.business.CashInOutOperationBusinessValidator
 import com.lykke.matching.engine.services.validators.business.CashTransferOperationBusinessValidator
@@ -622,5 +623,36 @@ open class TestApplicationContext {
                 limitOrderMassCancelInputQueue,
                 limitOrderInputQueue,
                 preProcessedMessageQueue)
+    }
+
+    @Bean
+    open fun executionPersistenceHelper(persistenceManager: PersistenceManager,
+                                        messageSequenceNumberHolder: MessageSequenceNumberHolder,
+                                        messageSender: MessageSender,
+                                        clientLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
+                                        trustedClientsLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
+                                        rabbitSwapQueue: BlockingQueue<MarketOrderWithTrades>): ExecutionPersistenceHelper {
+        return ExecutionPersistenceHelper(persistenceManager,
+                messageSequenceNumberHolder,
+                messageSender,
+                clientLimitOrdersQueue,
+                trustedClientsLimitOrdersQueue,
+                rabbitSwapQueue)
+    }
+
+    @Bean
+    open fun singleLimitOrderPreprocessor(limitOrderInputQueue: BlockingQueue<MessageWrapper>,
+                                          preProcessedMessageQueue: BlockingQueue<MessageWrapper>,
+                                          applicationSettingsCache: ApplicationSettingsCache,
+                                          executionPersistenceHelper: ExecutionPersistenceHelper,
+                                          processedMessagesCache: ProcessedMessagesCache,
+                                          @Qualifier("singleLimitOrderContextPreprocessorLogger")
+                                          logger: ThrottlingLogger): SingleLimitOrderPreprocessor {
+        return SingleLimitOrderPreprocessor(limitOrderInputQueue,
+                preProcessedMessageQueue,
+                applicationSettingsCache,
+                executionPersistenceHelper,
+                processedMessagesCache,
+                logger)
     }
 }

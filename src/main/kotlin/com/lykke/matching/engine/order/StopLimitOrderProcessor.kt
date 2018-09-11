@@ -40,7 +40,7 @@ class StopLimitOrderProcessor(private val limitOrderService: GenericLimitOrderSe
     fun processStopOrder(messageWrapper: MessageWrapper, singleLimitContext: SingleLimitOrderContext, now: Date) {
         val order = singleLimitContext.limitOrder
 
-        val limitAsset = singleLimitContext.limitAsset
+        val limitAsset = singleLimitContext.limitAsset!!
         val limitVolume = if (order.isBuySide()) {
             val limitPrice = order.upperPrice ?: order.lowerPrice
             if (limitPrice != null)
@@ -155,7 +155,7 @@ class StopLimitOrderProcessor(private val limitOrderService: GenericLimitOrderSe
         val walletOperationsProcessor = balancesHolder.createWalletProcessor(LOGGER, true)
         if (cancelVolume > BigDecimal.ZERO) {
             walletOperationsProcessor.preProcess(listOf(WalletOperation(UUID.randomUUID().toString(),
-                    order.externalId, order.clientId, singleLimitContext.limitAsset.assetId,
+                    order.externalId, order.clientId, singleLimitContext.limitAsset!!.assetId,
                     now, BigDecimal.ZERO, -cancelVolume)), true)
         }
         val orderBooksPersistenceData = if (ordersToCancel.isNotEmpty())
