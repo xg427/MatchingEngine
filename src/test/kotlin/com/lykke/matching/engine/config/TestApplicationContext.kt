@@ -68,6 +68,7 @@ import com.lykke.matching.engine.services.validators.input.LimitOrderInputValida
 import com.lykke.matching.engine.services.validators.input.impl.LimitOrderInputValidatorImpl
 import com.lykke.matching.engine.utils.MessageBuilder
 import com.lykke.matching.engine.utils.balance.ReservedVolumesRecalculator
+import com.lykke.matching.engine.utils.monitoring.GeneralHealthMonitor
 import com.lykke.matching.engine.utils.order.AllOrdersCanceller
 import com.lykke.matching.engine.utils.order.MinVolumeOrderCanceller
 import com.lykke.utils.logging.ThrottlingLogger
@@ -626,14 +627,17 @@ open class TestApplicationContext {
     }
 
     @Bean
-    open fun executionPersistenceHelper(persistenceManager: PersistenceManager,
-                                        messageSequenceNumberHolder: MessageSequenceNumberHolder,
+    open fun healthMonitor(): GeneralHealthMonitor {
+        return GeneralHealthMonitor()
+    }
+
+    @Bean
+    open fun executionPersistenceHelper(messageSequenceNumberHolder: MessageSequenceNumberHolder,
                                         messageSender: MessageSender,
                                         clientLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
                                         trustedClientsLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
                                         rabbitSwapQueue: BlockingQueue<MarketOrderWithTrades>): ExecutionPersistenceHelper {
-        return ExecutionPersistenceHelper(persistenceManager,
-                messageSequenceNumberHolder,
+        return ExecutionPersistenceHelper(messageSequenceNumberHolder,
                 messageSender,
                 clientLimitOrdersQueue,
                 trustedClientsLimitOrdersQueue,
@@ -645,6 +649,8 @@ open class TestApplicationContext {
                                           preProcessedMessageQueue: BlockingQueue<MessageWrapper>,
                                           applicationSettingsCache: ApplicationSettingsCache,
                                           executionPersistenceHelper: ExecutionPersistenceHelper,
+                                          healthMonitor: GeneralHealthMonitor,
+                                          singleLimitOrderPreprocessorPersistenceManager: PersistenceManager,
                                           processedMessagesCache: ProcessedMessagesCache,
                                           @Qualifier("singleLimitOrderContextPreprocessorLogger")
                                           logger: ThrottlingLogger): SingleLimitOrderPreprocessor {
@@ -652,6 +658,8 @@ open class TestApplicationContext {
                 preProcessedMessageQueue,
                 applicationSettingsCache,
                 executionPersistenceHelper,
+                healthMonitor,
+                singleLimitOrderPreprocessorPersistenceManager,
                 processedMessagesCache,
                 logger)
     }

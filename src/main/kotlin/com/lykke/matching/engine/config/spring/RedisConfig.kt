@@ -68,6 +68,11 @@ open class RedisConfig {
     open fun cashTransferOperationsPreprocessorRedisConnection(): RedisConnection? {
         return redisConnectionFactory.getConnection("cashTransferOperationsPreprocessorRedisConnection")
     }
+
+    @Bean
+    open fun singleLimitOrderPreprocessorRedisConnection(): RedisConnection? {
+        return redisConnectionFactory.getConnection("singleLimitOrderPreprocessorRedisConnection")
+    }
     //</editor-fold>
 
 

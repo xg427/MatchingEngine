@@ -52,6 +52,11 @@ open class DatabaseAccessorConfig {
     open fun cashTransferPreprocessorPersistenceManager(cashTransferOperationsPreprocessorRedisConnection: Optional<RedisConnection>): PersistenceManager {
         return persistenceManagerFactory.get(cashTransferOperationsPreprocessorRedisConnection)
     }
+
+    @Bean
+    open fun singleLimitOrderPreprocessorPersistenceManager(singleLimitOrderPreprocessorRedisConnection: Optional<RedisConnection>): PersistenceManager {
+        return persistenceManagerFactory.get(singleLimitOrderPreprocessorRedisConnection)
+    }
     //</editor-fold>
 
     //<editor-fold desc="Multisource database accessors">

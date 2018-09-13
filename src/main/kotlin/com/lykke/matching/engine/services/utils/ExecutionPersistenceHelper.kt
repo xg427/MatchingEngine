@@ -18,14 +18,14 @@ import java.util.Date
 import java.util.concurrent.BlockingQueue
 
 @Component
-class ExecutionPersistenceHelper(private val persistenceManager: PersistenceManager,
-                                 private val messageSequenceNumberHolder: MessageSequenceNumberHolder,
+class ExecutionPersistenceHelper(private val messageSequenceNumberHolder: MessageSequenceNumberHolder,
                                  private val messageSender: MessageSender,
                                  private val clientLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
                                  private val trustedClientsLimitOrdersQueue: BlockingQueue<LimitOrdersReport>,
                                  private val rabbitSwapQueue: BlockingQueue<MarketOrderWithTrades>) {
 
-    fun persistAndSendEvents(messageWrapper: MessageWrapper,
+    fun persistAndSendEvents(persistenceManager: PersistenceManager,
+                             messageWrapper: MessageWrapper,
                              walletOperationsProcessor: WalletOperationsProcessor? = null,
                              processedMessage: ProcessedMessage?,
                              orderBooksData: OrderBooksPersistenceData? = null,
@@ -38,7 +38,8 @@ class ExecutionPersistenceHelper(private val persistenceManager: PersistenceMana
                              messageType: MessageType,
                              date: Date): Boolean {
         val sequenceNumbers = generateSequenceNumbers(clientsLimitOrdersWithTrades, trustedClientsLimitOrdersWithTrades, marketOrderWithTrades)
-        val persisted = persist(messageWrapper,
+        val persisted = persist(persistenceManager,
+                messageWrapper,
                 walletOperationsProcessor,
                 processedMessage,
                 orderBooksData,
@@ -58,7 +59,8 @@ class ExecutionPersistenceHelper(private val persistenceManager: PersistenceMana
         return persisted
     }
 
-    fun persist(messageWrapper: MessageWrapper,
+    fun persist(persistenceManager: PersistenceManager,
+                messageWrapper: MessageWrapper,
                 walletOperationsProcessor: WalletOperationsProcessor? = null,
                 processedMessage: ProcessedMessage?,
                 orderBooksData: OrderBooksPersistenceData? = null,

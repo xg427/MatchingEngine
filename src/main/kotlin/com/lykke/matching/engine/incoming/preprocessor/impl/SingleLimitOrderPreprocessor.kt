@@ -3,6 +3,7 @@ package com.lykke.matching.engine.incoming.preprocessor.impl
 import com.lykke.matching.engine.daos.LimitOrder
 import com.lykke.matching.engine.daos.context.SingleLimitOrderContext
 import com.lykke.matching.engine.daos.order.LimitOrderType
+import com.lykke.matching.engine.database.PersistenceManager
 import com.lykke.matching.engine.database.cache.ApplicationSettingsCache
 import com.lykke.matching.engine.deduplication.ProcessedMessagesCache
 import com.lykke.matching.engine.exception.PersistenceException
@@ -19,6 +20,7 @@ import com.lykke.matching.engine.services.utils.ExecutionPersistenceHelper
 import com.lykke.matching.engine.services.validators.impl.OrderValidationException
 import com.lykke.matching.engine.services.validators.impl.OrderValidationResult
 import com.lykke.matching.engine.services.validators.input.LimitOrderInputValidator
+import com.lykke.matching.engine.utils.monitoring.GeneralHealthMonitor
 import com.lykke.matching.engine.utils.order.MessageStatusUtils
 import com.lykke.utils.logging.MetricsLogger
 import com.lykke.utils.logging.ThrottlingLogger
@@ -34,6 +36,8 @@ class SingleLimitOrderPreprocessor(private val limitOrderInputQueue: BlockingQue
                                    private val preProcessedMessageQueue: BlockingQueue<MessageWrapper>,
                                    private val applicationSettingsCache: ApplicationSettingsCache,
                                    private val executionPersistenceHelper: ExecutionPersistenceHelper,
+                                   private val healthMonitor: GeneralHealthMonitor,
+                                   private val singleLimitOrderPreprocessorPersistenceManager: PersistenceManager,
                                    private val processedMessagesCache: ProcessedMessagesCache,
                                    @Qualifier("singleLimitOrderContextPreprocessorLogger")
                                    private val logger: ThrottlingLogger): MessagePreprocessor, Thread(SingleLimitOrderPreprocessor::class.java.name) {
@@ -49,6 +53,10 @@ class SingleLimitOrderPreprocessor(private val limitOrderInputQueue: BlockingQue
 
     override fun preProcess(messageWrapper: MessageWrapper) {
         val singleLimitOrderParsedData = singleLimitOrderContextParser.parse(messageWrapper)
+        if (isMaintenanceMode()) {
+            throw Exception("Maintenance mode")
+        }
+
         val singleLimitContext = singleLimitOrderParsedData.messageWrapper.context as SingleLimitOrderContext
 
         if (singleLimitContext.assetPair == null) {
@@ -58,6 +66,10 @@ class SingleLimitOrderPreprocessor(private val limitOrderInputQueue: BlockingQue
 
         singleLimitContext.validationResult = getValidationResult(singleLimitOrderParsedData)
         preProcessedMessageQueue.put(singleLimitOrderParsedData.messageWrapper)
+    }
+
+    private fun isMaintenanceMode(): Boolean {
+        return !healthMonitor.ok()
     }
 
     private fun rejectOrderWithUnknownAssetPair(messageWrapper: MessageWrapper, context: SingleLimitOrderContext) {
@@ -79,7 +91,8 @@ class SingleLimitOrderPreprocessor(private val limitOrderInputQueue: BlockingQue
         } else {
             clientsOrdersWithTrades.add(orderWithTrades)
         }
-        val persisted = executionPersistenceHelper.persistAndSendEvents(messageWrapper,
+        val persisted = executionPersistenceHelper.persistAndSendEvents(singleLimitOrderPreprocessorPersistenceManager,
+                messageWrapper,
                 processedMessage = messageWrapper.processedMessage(),
                 clientsLimitOrdersWithTrades = clientsOrdersWithTrades,
                 trustedClientsLimitOrdersWithTrades = trustedClientsOrdersWithTrades,
