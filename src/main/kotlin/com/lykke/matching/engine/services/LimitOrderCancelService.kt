@@ -2,13 +2,12 @@ package com.lykke.matching.engine.services
 
 import com.lykke.matching.engine.daos.LimitOrder
 import com.lykke.matching.engine.messages.MessageStatus
-import com.lykke.matching.engine.messages.MessageType
 import com.lykke.matching.engine.messages.MessageWrapper
 import com.lykke.matching.engine.messages.ProtocolMessages
 import com.lykke.matching.engine.order.cancel.GenericLimitOrdersCancellerFactory
+import com.lykke.matching.engine.services.AbstractLimitOrdersCancelService.Companion.Orders
 import org.apache.log4j.Logger
-import java.util.Date
-import java.util.LinkedList
+import java.util.*
 
 class LimitOrderCancelService(genericLimitOrderService: GenericLimitOrderService,
                               genericStopLimitOrderService: GenericStopLimitOrderService,
@@ -20,15 +19,6 @@ class LimitOrderCancelService(genericLimitOrderService: GenericLimitOrderService
     }
 
     override fun getOrders(messageWrapper: MessageWrapper): Orders {
-        if (messageWrapper.type == MessageType.OLD_LIMIT_ORDER_CANCEL.type) {
-            val message = messageWrapper.parsedMessage!! as ProtocolMessages.OldLimitOrderCancel
-            LOGGER.debug("Got old limit  order messageId: ${messageWrapper.messageId}  (id: ${message.limitOrderId}) cancel request id: ${message.uid}")
-
-            genericLimitOrderService.cancelLimitOrder(Date(), message.limitOrderId.toString(), true)
-            messageWrapper.writeResponse(ProtocolMessages.Response.newBuilder())
-            return Orders.processed()
-        }
-
         val message = messageWrapper.parsedMessage!! as ProtocolMessages.LimitOrderCancel
         val orderIds = message.limitOrderIdList.toList()
         LOGGER.debug("Got limit order cancel request (id: ${message.uid}, orders: $orderIds)")
@@ -70,35 +60,19 @@ class LimitOrderCancelService(genericLimitOrderService: GenericLimitOrderService
         return Orders.notProcessed(orders, stopOrders)
     }
 
-    private fun parseOldLimitOrderCancel(array: ByteArray): ProtocolMessages.OldLimitOrderCancel {
-        return ProtocolMessages.OldLimitOrderCancel.parseFrom(array)
-    }
-
     private fun parseLimitOrderCancel(array: ByteArray): ProtocolMessages.LimitOrderCancel {
         return ProtocolMessages.LimitOrderCancel.parseFrom(array)
     }
 
     override fun parseMessage(messageWrapper: MessageWrapper) {
-        if (messageWrapper.type == MessageType.OLD_LIMIT_ORDER_CANCEL.type) {
-            val message =  parseOldLimitOrderCancel(messageWrapper.byteArray)
-            messageWrapper.messageId = if(message.hasMessageId()) message.messageId else message.uid.toString()
-            messageWrapper.timestamp = Date().time
-            messageWrapper.parsedMessage = message
-            messageWrapper.id = message.uid.toString()
-        } else {
-            val message =  parseLimitOrderCancel(messageWrapper.byteArray)
-            messageWrapper.messageId = if(message.hasMessageId()) message.messageId else message.uid.toString()
-            messageWrapper.timestamp = Date().time
-            messageWrapper.parsedMessage = message
-            messageWrapper.id = message.uid
-        }
+        val message =  parseLimitOrderCancel(messageWrapper.byteArray)
+        messageWrapper.messageId = if(message.hasMessageId()) message.messageId else message.uid.toString()
+        messageWrapper.timestamp = Date().time
+        messageWrapper.parsedMessage = message
+        messageWrapper.id = message.uid
     }
 
     private fun writeResponse(messageWrapper: MessageWrapper, status: MessageStatus, message: String?) {
-        if (messageWrapper.type == MessageType.OLD_LIMIT_ORDER_CANCEL.type) {
-            messageWrapper.writeResponse(ProtocolMessages.Response.newBuilder())
-            return
-        }
         val builder = ProtocolMessages.NewResponse.newBuilder().setStatus(status.type)
         message?.let {
             builder.statusReason = message

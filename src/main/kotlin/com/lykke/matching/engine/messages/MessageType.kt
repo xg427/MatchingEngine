@@ -1,13 +1,12 @@
 package com.lykke.matching.engine.messages
 
-import java.util.HashMap
+import java.util.*
 
 enum class MessageType (val type: Byte){
     RESPONSE(0)
     ,PING(1)
     ,CASH_OPERATION(2)
     ,OLD_MARKET_ORDER(4)
-    ,OLD_LIMIT_ORDER_CANCEL(5)
     ,OLD_BALANCE_UPDATE(6)
     ,OLD_MULTI_LIMIT_ORDER(7)
     ,CASH_TRANSFER_OPERATION(8)
