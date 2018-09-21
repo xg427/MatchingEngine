@@ -9,7 +9,6 @@ import java.util.concurrent.BlockingQueue
 class MessageRouter(
         private val cashInOutInputQueue: BlockingQueue<MessageWrapper>,
         private val cashTransferInputQueue: BlockingQueue<MessageWrapper>,
-        private val limitOrderCancelInputQueue: BlockingQueue<MessageWrapper>,
         private val limitOrderMassCancelInputQueue: BlockingQueue<MessageWrapper>,
         private val limitOrderInputQueue: BlockingQueue<MessageWrapper>,
         val preProcessedMessageQueue: BlockingQueue<MessageWrapper>
@@ -19,8 +18,6 @@ class MessageRouter(
             MessageType.CASH_IN_OUT_OPERATION.type -> cashInOutInputQueue.put(wrapper)
             MessageType.CASH_TRANSFER_OPERATION.type -> cashTransferInputQueue.put(wrapper)
             MessageType.LIMIT_ORDER_CANCEL.type,
-            MessageType.OLD_LIMIT_ORDER_CANCEL.type -> limitOrderCancelInputQueue.put(wrapper)
-            MessageType.OLD_LIMIT_ORDER.type,
             MessageType.LIMIT_ORDER.type -> limitOrderInputQueue.put(wrapper)
             MessageType.LIMIT_ORDER_MASS_CANCEL.type -> limitOrderMassCancelInputQueue.put(wrapper)
             else -> preProcessedMessageQueue.put(wrapper)

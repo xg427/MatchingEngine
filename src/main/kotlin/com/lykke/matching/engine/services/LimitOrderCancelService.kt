@@ -3,15 +3,9 @@ package com.lykke.matching.engine.services
 import com.lykke.matching.engine.daos.LimitOrder
 import com.lykke.matching.engine.daos.context.LimitOrderCancelOperationContext
 import com.lykke.matching.engine.daos.order.LimitOrderType
-import com.lykke.matching.engine.database.PersistenceManager
-import com.lykke.matching.engine.database.common.entity.OrderBookPersistenceData
-import com.lykke.matching.engine.database.common.entity.OrderBooksPersistenceData
-import com.lykke.matching.engine.database.common.entity.PersistenceData
 import com.lykke.matching.engine.messages.MessageStatus
-import com.lykke.matching.engine.messages.MessageType
 import com.lykke.matching.engine.messages.MessageWrapper
 import com.lykke.matching.engine.messages.ProtocolMessages
-import com.lykke.matching.engine.order.cancel.GenericLimitOrdersCancellerFactory
 import com.lykke.matching.engine.services.validators.business.LimitOrderCancelOperationBusinessValidator
 import com.lykke.matching.engine.services.validators.impl.ValidationException
 import com.lykke.matching.engine.utils.order.MessageStatusUtils
@@ -24,7 +18,6 @@ import java.util.stream.Collectors
 class LimitOrderCancelService(private val genericLimitOrderService: GenericLimitOrderService,
                               private val genericStopLimitOrderService: GenericStopLimitOrderService,
                               private val validator: LimitOrderCancelOperationBusinessValidator,
-                              private val persistenceManager: PersistenceManager,
                               private val limitOrdersCancelHelper: LimitOrdersCancelHelper) : AbstractService {
 
 
@@ -35,10 +28,6 @@ class LimitOrderCancelService(private val genericLimitOrderService: GenericLimit
     override fun processMessage(messageWrapper: MessageWrapper) {
         val now = Date()
         val context = messageWrapper.context as LimitOrderCancelOperationContext
-
-        if (messageWrapper.type == MessageType.OLD_LIMIT_ORDER_CANCEL.type) {
-            processOldLimitOrderCancelMessage(messageWrapper, context, now)
-        }
 
         val orderIds = context.limitOrderIds
         LOGGER.debug("Got limit order cancel request (messageId: ${messageWrapper.messageId}, id: ${context.uid}, orders: $orderIds)")
@@ -75,32 +64,10 @@ class LimitOrderCancelService(private val genericLimitOrderService: GenericLimit
                 .map(::getOrder)
                 .filter { limitOrder -> limitOrder != null }
                 .map { t -> t!! }
-                .collect(Collectors.groupingBy({ limitOrder: LimitOrder -> limitOrder.type!! }))
+                .collect(Collectors.groupingBy { limitOrder: LimitOrder -> limitOrder.type!! })
     }
 
     private fun getOrder(orderId: String): LimitOrder? {
         return genericLimitOrderService.getOrder(orderId) ?: genericStopLimitOrderService.getOrder(orderId)
-    }
-
-    private fun processOldLimitOrderCancelMessage(messageWrapper: MessageWrapper, context: LimitOrderCancelOperationContext,  now: Date) {
-        LOGGER.debug("Got old limit  order messageId: ${context.messageId}  (id: ${context.limitOrderIds}) cancel request id: ${context.uid}")
-        val order = genericLimitOrderService.getOrder(context.limitOrderIds.first().toString())
-        if (order != null) {
-            val newOrderBook = genericLimitOrderService.getOrderBook(order.assetPairId).copy()
-            newOrderBook.removeOrder(order)
-            val updated = persistenceManager.persist(PersistenceData(null,
-                    context.processedMessage,
-                    OrderBooksPersistenceData(listOf(OrderBookPersistenceData(order.assetPairId,
-                            order.isBuySide(),
-                            newOrderBook.getCopyOfOrderBook(order.isBuySide()))),
-                            emptyList(),
-                            listOf(order)),
-                    null,
-                    null))
-            if (updated) {
-                genericLimitOrderService.cancelLimitOrder(Date(), context.limitOrderIds.first(), true)
-            }
-        }
-        messageWrapper.writeResponse(ProtocolMessages.Response.newBuilder())
     }
 }
